@@ -8,7 +8,7 @@ OPENAI_KEY = str(os.getenv("OPENAI_KEY"))
 DISCORD_BOT_TOKEN = str(os.getenv("DISCORD_BOT_TOKEN"))
 
 ai_client = OpenAI(
-    base_url="https://openai.com/api/v1",
+    base_url="https://api.openai.com/v1",
     api_key=OPENAI_KEY,
 )
 
@@ -31,6 +31,16 @@ initial_prompt = ""
 
 chat_history = {} # key: channel_id, value: list of messages
 
+def load_initial_prompt():
+    global initial_prompt
+    try:
+        with open("prompt.txt", "r", encoding="utf-8") as file:
+            initial_prompt = file.read()
+            logging.info("Initial prompt loaded: %s", initial_prompt)
+    except FileNotFoundError:
+        logging.warning("prompt.txt not found, using empty initial prompt")
+        initial_prompt = ""
+
 def clear_history(channel_id: int):
     if channel_id in chat_history:
         chat_history[channel_id] = [
@@ -50,23 +60,25 @@ async def reply_to_message(message: discord.Message, command_used: str | None):
         
         chat_history[channel_id].append({"role": "user", "content": user_message})
         
-        response = ai_client.chat.completions.create(
-            model="gpt-4.1",
-            messages=chat_history[channel_id][-20:],
-        )
-        
-        reply = response.choices[0].message.content
-        chat_history[channel_id].append({"role": "assistant", "content": reply})
-        
-        await message.channel.send(reply, reference=message)
+        try:
+            response = ai_client.chat.completions.create(
+                model="gpt-4o",  # Updated model name
+                messages=chat_history[channel_id][-20:],
+            )
+            
+            reply = response.choices[0].message.content
+            chat_history[channel_id].append({"role": "assistant", "content": reply})
+            
+            await message.channel.send(reply, reference=message)
+        except Exception as e:
+            logging.error(f"OpenAI API error: {e}")
+            await message.channel.send("Sorry, I'm having trouble connecting to my AI service right now. Please try again later.", reference=message)
 
 @discord_client.event
 async def on_ready():
     logging.info("Logged in as %s", discord_client.user)
     # load initial prompt from prompt.txt
-    with open("prompt.txt", "r", encoding="utf-8") as file:
-        initial_prompt = file.read()
-        logging.info("Initial prompt loaded: %s", initial_prompt)
+    load_initial_prompt()
 
 @discord_client.event
 async def on_message(message: discord.Message):
