@@ -32,6 +32,8 @@ initial_prompt = ""
 chat_history = {} # key: channel_id, value: list of messages
 
 def load_initial_prompt():
+    # load initial prompt from prompt.txt
+    # if prompt.txt is not found, use empty initial prompt
     global initial_prompt
     try:
         with open("prompt.txt", "r", encoding="utf-8") as file:
@@ -42,12 +44,20 @@ def load_initial_prompt():
         initial_prompt = ""
 
 def clear_history(channel_id: int):
+    # clear history for a specific channel
+    # if channel_id is not in chat_history, do nothing
     if channel_id in chat_history:
         chat_history[channel_id] = [
             {"role": "system", "content": initial_prompt},
         ]
         
 async def reply_to_message(message: discord.Message, command_used: str | None):
+    # reply to a message
+    # if command_used is not None, remove the command from the message
+    # if message is a reply to the bot, reply to the message
+    # if message is a command, reply to the message
+    # if message is a normal message, reply to the message
+    
     async with message.channel.typing():
         user_message = message.content.replace(command_used, "").strip() if command_used else message.content
         
@@ -76,12 +86,17 @@ async def reply_to_message(message: discord.Message, command_used: str | None):
 
 @discord_client.event
 async def on_ready():
-    logging.info("Logged in as %s", discord_client.user)
     # load initial prompt from prompt.txt
     load_initial_prompt()
+    logging.info("Logged in as %s", discord_client.user)
 
 @discord_client.event
 async def on_message(message: discord.Message):
+    # on message event
+    # if message is from the bot, do nothing
+    # if message is a command, reply to the message
+    # if message is a normal message, reply to the message
+    
     if message.author == discord_client.user:
         return
     logging.info("Message received: author: %s, content: %s", message.author, message.content)
